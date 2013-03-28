@@ -54,10 +54,7 @@ abstract class DataService {
         if (isset($this->rs[$key]))
             $this->rs[$key] = $val;
     }
-
-    public function __isset() {
-        return !empty($this->pkName);
-    }
+    
     public function getProperties() {
         return $this->rs;
     }
