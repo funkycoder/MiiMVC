@@ -18,11 +18,19 @@ abstract class DataService {
 
     const DB_SERVER = "localhost";
     const DB_NAME = "user";
-    const DB_USER_READ = "root";
-    const DB_PASSWORD_READ = "";
-    const DB_USER_WRITE = "root";
-    const DB_PASSWORD_WRITE = "";
-
+    const DB_USER_READ = "user_read";
+    const DB_PASSWORD_READ = "read";
+    const DB_USER_WRITE = "user_write";
+    const DB_PASSWORD_WRITE = "write";
+/**
+ * @assert ('id', arrray('username','phone')) == expectedResult
+ * @
+ * @param type $pkName
+ * @param type $fields
+ * @param type $tableName
+ * @param type $quoteStyle
+ * @param type $compressArray
+ */
     function __construct($pkName = '', $fields = array(), $tableName = '', $quoteStyle = 'MYSQL', $compressArray = true) {
         $this->pkName = $pkName; //Name of auto-incremented Primary Key
         $this->tableName = $tableName; //Corresponding table in database  
@@ -32,9 +40,10 @@ abstract class DataService {
         //initialize property array
         foreach ($fields as $field) {
             $this->rs[$field] = '';
+        }   
+        if (!in_array($pkName, $fields)){
+            $this->rs[$pkName]=0;
         }
-        //Don't have to check pkname value to insert into database
-        $this->rs[$pkName] = NULL;
     }
 
     //interceptors (Magic functions)
@@ -119,10 +128,11 @@ abstract class DataService {
     public function insert() {
         $conn = $this->getConnection('write');
         $pkName = $this->pkName;
+        if (isset($this->$pkName)) $this->$pkName = (int) $this->$pkName;
         $tableName = $this->enquote($this->tableName);
         //prepare fields and values array.         
         //If pkname not null then it must be set a number 
-        $this->rs[$pkName] = ($this->rs[$pkName]) ? ((int) $this->rs[$pkName]) : NULL;
+       
         foreach ($this->rs as $key => $value) {
             $fields[] = $this->enquote($key);
             $values[] = (is_scalar($value)) ? $value : $this->deflateValue($value);
@@ -141,7 +151,7 @@ abstract class DataService {
         if (!$stmt->rowCount())
             return false;
         //set the id back to object
-        $this->set($pkName, $conn->lastInsertId());
+        $this->$pkName= $conn->lastInsertId();
         return $this;
     }
 
