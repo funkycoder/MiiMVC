@@ -51,6 +51,12 @@ abstract class ObjectModel {
             $this->properties[$key] = ($key == $this->pkName) ? ((int) $val) : $val;
     }
 
+    public function __clone() {
+        //set pkValue =  0;
+        $this->properties[$this->pkName] = 0;
+        $this->dataService = clone $this->dataService;
+    }
+
     public function getProperties() {
         return $this->properties;
     }
@@ -91,7 +97,7 @@ abstract class ObjectModel {
             $success = $this->dataService->insert();
         } catch (\PDOException $e) {
             //getCode() return SQL error code (PDO error code is in $e->errorInfo[1])
-            $this->errors['data'] .= ($e->getCode()=='23000')? '(Record đã tồn tại.)' : '('.$e->errorInfo[2] . ')';
+            $this->errors['data'] .= ($e->getCode() == '23000') ? '(Record đã tồn tại.)' : '(' . $e->errorInfo[2] . ')';
             return FALSE;
         }
         if ($success)
@@ -112,7 +118,7 @@ abstract class ObjectModel {
         try {
             $success = $this->dataService->update();
         } catch (\PDOException $e) {
-             $this->errors['data'] .= 'Cập nhật record thất bại. ('.$e->errorInfo[2] . ')';
+            $this->errors['data'] .= 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
             return FALSE;
         }
         if ($success)
@@ -124,8 +130,8 @@ abstract class ObjectModel {
         $this->errors['data'] = 'Xóa record thất bại.';
         try {
             $success = $this->dataService->delete();
-         } catch (\PDOException $e) {
-             $this->errors['data'] .= '('.$e->errorInfo[2] . ')';
+        } catch (\PDOException $e) {
+            $this->errors['data'] .= '(' . $e->errorInfo[2] . ')';
             return FALSE;
         }
         if ($success)
@@ -134,7 +140,8 @@ abstract class ObjectModel {
     }
 
     public function exists() {
-        if ($this->isEmpty()) return FALSE;
+        if ($this->isEmpty())
+            return FALSE;
         return $this->dataService->exists();
     }
 
@@ -150,7 +157,6 @@ abstract class ObjectModel {
         $this->results = $this->dataService->select($selectwhat, $wherewhat, $bindings, $pdo_fetch_mode);
     }
 
-//TODO Implement CLONE here
 }
 
 ?>

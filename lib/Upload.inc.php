@@ -263,6 +263,7 @@ class Mii_Upload {
             if ($sizeOK && $typeOK && $directoryOK) {
                 $name = Mii_File::checkFileName($this->_destination, $filename, $overwrite);
                 //Move file from temp folder to _destination
+                //TODO check if the correct file is uploaded as suggest by Kevin Yank (Chap12)
                 $success = move_uploaded_file($tempName, $this->_destination . $name);
                 if ($success) {
                     //add the amended file name to array of filenames

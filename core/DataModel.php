@@ -23,12 +23,12 @@ abstract class DataModel {
 
     protected $QUOTE_STYLE; // valid types are MYSQL,MSSQL,ANSI
     protected $COMPRESS_ARRAY; //valid only for MySQL BLOB field
-    
     protected $myObject;
     protected $pkName;
     protected $tableName;
 
     //Database credentials
+
     const DB_SERVER = "localhost";
     const DB_NAME = "user";
     const DB_USER_READ = "user_read";
@@ -41,7 +41,7 @@ abstract class DataModel {
         $this->COMPRESS_ARRAY = $compressArray;
     }
 
-    public function initDataService(ObjectModel $myObject,$pkName = '',$tableName = '') {
+    public function initDataService(ObjectModel $myObject, $pkName = '', $tableName = '') {
         $this->myObject = $myObject;
         $this->pkName = $pkName;
         $this->tableName = $tableName;
@@ -206,26 +206,7 @@ abstract class DataModel {
     }
 
     function retrieve_many($wherewhat = '', $bindings = '') {
-        //get read connection
-        $conn = $this->getConnection();
-        $myObject = $this->myObject;
-        $tableName = $this->tableName;
-        //one value? then convert it to an array
-        if (is_scalar($bindings))
-            $bindings = trim($bindings) ? array($bindings) : array();
-        $sql = 'SELECT * FROM ' . $this->enquote($tableName);
-        if ($wherewhat)
-            $sql .= ' WHERE ' . $wherewhat;
-        $stmt = $conn->prepare($sql);
-        $stmt->execute($bindings);
-        $arr = array();
-        $class = get_class($myObject);
-        while ($rs = $stmt->fetch(\PDO::FETCH_ASSOC)) {
-            $myclass = new $class();
-            $myclass->properties=$rs;
-            $arr[] = $myclass;
-        }
-        return $arr;
+        return $this->select('*', $wherewhat, $bindings);
     }
 
     /**
@@ -240,9 +221,10 @@ abstract class DataModel {
      * @param PDO::FETCH_* $pdo_fetch_mode
      * @return array An array of returned records
      */
-    function select($selectwhat = '*', $wherewhat = '', $bindings = '', $pdo_fetch_mode = \PDO::FETCH_ASSOC) {
+    function select($selectwhat = '*', $wherewhat = '', $bindings = '') {
         //get read connection
         $conn = $this->getConnection();
+        $myObject = $this->myObject;
         $tableName = $this->tableName;
         //one value? then convert it to an array
         if (is_scalar($bindings))
@@ -252,7 +234,14 @@ abstract class DataModel {
             $sql .= ' WHERE ' . $wherewhat;
         $stmt = $conn->prepare($sql);
         $stmt->execute($bindings);
-        return $stmt->fetchAll($pdo_fetch_mode);
+        $arr = array();
+        $class = get_class($myObject);
+        while ($rs = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            $myclass = new $class();
+            $myclass->properties = $rs;
+            $arr[] = $myclass;
+        }
+        return $arr;
     }
 
 }
