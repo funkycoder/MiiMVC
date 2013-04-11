@@ -3,8 +3,6 @@
 namespace Mii;
 use Mii\Login\Model;
 
-require_once '..\Core\DataModel.php';
-require_once '..\Core\ObjectModel.php';
 require_once '..\Login\Model\User.php';
 require_once '..\Login\Model\UserService.php';
 

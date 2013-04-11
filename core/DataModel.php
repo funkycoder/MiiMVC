@@ -90,20 +90,6 @@ abstract class DataModel {
         return \unserialize($this->COMPRESS_ARRAY ? \gzinflate($value) : $value);
     }
 
-    protected function fill($rs = array()) {
-        //the database return a record
-        $myObject = $this->myObject;
-        if ($rs) {
-            foreach ($rs as $key => $value)
-                $myObject->$key = is_scalar($myObject->$key) ? $value : $this->inflateValue($value);
-            return TRUE;
-        } else {
-            //if $rs empty then the request return no record. 
-            $myObject->resetProperties();
-            return FALSE;
-        }
-    }
-
     //Inserts record into database with a new auto-incremented primary key
     public function insert() {
         $conn = $this->getConnection('write');
@@ -116,7 +102,7 @@ abstract class DataModel {
             $values[] = (is_scalar($value)) ? $value : $this->deflateValue($value);
         }
         //prepared statement question mark holder
-        for ($i = 0; $i < $myObject->count(); $i++) {
+        for ($i = 0; $i < count($fields); $i++) {
             $temp[] = '?';
         }
         $sql = 'INSERT INTO ' . $this->enquote($tableName);
@@ -129,19 +115,6 @@ abstract class DataModel {
         //set the id then return this object
         $myObject->$pkName = $conn->lastInsertId();
         return TRUE;
-    }
-
-    public function retrieve($pkValue) {
-        //get read connection
-        $conn = $this->getConnection();
-        $pkName = $this->pkName;
-        $tableName = $this->tableName;
-        $sql = 'SELECT * FROM ' . $this->enquote($tableName) . ' WHERE ' . $this->enquote($pkName) . '=?';
-        $stmt = $conn->prepare($sql);
-        $stmt->bindValue(1, (int) $pkValue);
-        $stmt->execute();
-        $rs = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $this->fill($rs);
     }
 
     public function update() {
@@ -188,6 +161,23 @@ abstract class DataModel {
         return $result->rowCount();
     }
 
+    public function retrieve($pkValue) {
+        //get read connection
+        $conn = $this->getConnection();
+        $pkName = $this->pkName;
+        $tableName = $this->tableName;
+        $sql = 'SELECT * FROM ' . $this->enquote($tableName) . ' WHERE ' . $this->enquote($pkName) . '=?';
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue(1, (int) $pkValue);
+        $stmt->execute();
+        $rs = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $class = get_class($this->myObject);
+        $myclass = new $class();
+        foreach ($rs as $key => $value)
+            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        return $myclass;
+    }
+
     public function retrieve_one($wherewhat = '', $bindings = '') {
         //get read connection
         $conn = $this->getConnection();
@@ -202,7 +192,27 @@ abstract class DataModel {
         $stmt = $conn->prepare($sql);
         $stmt->execute($bindings);
         $rs = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $this->fill($rs);
+        $class = get_class($this->myObject);
+        $myclass = new $class();
+        foreach ($rs as $key => $value)
+            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        return $myclass;
+    }
+
+    public function retrieve_one_by_field($fieldName, $fieldValue) {
+        $conn = $this->getConnection();
+        $tableName = $this->tableName;
+        //one value? then convert it to an array
+        $sql = 'SELECT * FROM ' . $this->enquote($tableName);
+        $sql .= ' WHERE ' . $this->enquote($fieldName) . "='$fieldValue'";
+        $sql.=' LIMIT 1';
+        $result = $conn->query($sql);
+        $rs = $result->fetch(\PDO::FETCH_ASSOC);
+        $class = get_class($this->myObject);
+        $myclass = new $class();
+        foreach ($rs as $key => $value)
+            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        return $myclass;
     }
 
     function retrieve_many($wherewhat = '', $bindings = '') {
@@ -238,7 +248,8 @@ abstract class DataModel {
         $class = get_class($myObject);
         while ($rs = $stmt->fetch(\PDO::FETCH_ASSOC)) {
             $myclass = new $class();
-            $myclass->properties = $rs;
+            foreach ($rs as $key => $value)
+                $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
             $arr[] = $myclass;
         }
         return $arr;

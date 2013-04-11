@@ -2,13 +2,15 @@
 
 namespace Mii\Core;
 
+require_once __DIR__ . '/DataModel.php';
+
 abstract class ObjectModel {
 
-    protected $pkName;
+    protected $pkName; //primary key name
     protected $properties = array();
     protected $optionalProperties = array();
-    protected $dataService;
-    protected $results; // results from query for many records
+    protected $controlFields = array(); //control fields form form submission
+    protected $dataService; //take care of the interaction btw this obj and from submission
     protected $errors;
 
     function __construct(DataModel $dataModel, $pkName = '', $fields = array(), $optionalFields = array(), $tableName = '') {
@@ -38,17 +40,22 @@ abstract class ObjectModel {
         if (method_exists($this, $method)) {
             return $this->$method();
         }
+        if (isset($this->$key)) {
+            return $this->$key;
+        }
         return $this->properties[$key];
     }
 
-    public function __set($key, $val) {
+    public function __set($key, $value) {
         $method = "set{$key}";
         if (method_exists($this, $method)) {
-            return $this->$method($val);
+            return $this->$method($value);
         }
-        if (isset($this->properties[$key]))
+        if (isset($this->$key))
+            $this->$key = $value;
+        elseif (isset($this->properties[$key]))
         //make sure pkName have an int value
-            $this->properties[$key] = ($key == $this->pkName) ? ((int) $val) : $val;
+            $this->properties[$key] = ($key == $this->pkName) ? ((int) $value) : $value;
     }
 
     public function __clone() {
@@ -57,21 +64,39 @@ abstract class ObjectModel {
         $this->dataService = clone $this->dataService;
     }
 
+    public function getPkName() {
+        return $this->pkName;
+    }
+
     public function getProperties() {
         return $this->properties;
     }
 
+    public function getOptionalProperties() {
+        return $this->optionalProperties;
+    }
+
     public function setProperties($arr = array()) {
+        //Get values for properties from an array
         if ($arr)
             foreach ($arr as $key => $value)
                 $this->$key = $value;
     }
 
     public function resetProperties() {
+        //primary value = 0 and empty string for other properties
         $fields = array_keys($this->properties);
         foreach ($fields as $field)
             $this->properties[$field] = '';
         $this->properties[$this->pkName] = 0;
+    }
+
+    public function getControlFields() {
+        return $this->controlFields;
+    }
+//TODO delete this after testing
+    public function setControlFields($field, $value) {
+        $this->controlFields[$field] = $value;
     }
 
     public function getResults() {
@@ -82,31 +107,76 @@ abstract class ObjectModel {
         return $this->errors;
     }
 
+    public function getError($field) {
+        //if this error has been set then return it
+        if (isset($this->errors[$field]))
+            return $this->errors[$field];
+        //if not set, then return empty string for display use only
+        return '';
+    }
+
+    public function setError($field, $value) {
+        $this->errors[$field] = $value;
+    }
+
     public function isEmpty() {
         //Check pkValue = 0? then this object is not filled with data
         return !$this->properties[$this->pkName];
     }
 
-    public function count() {
-        return count($this->properties);
+    public function form_filled() {
+        //if the $key in the $_REQUEST has the same name as the properties
+        //then assign it the corresponding $key in properties
+        foreach ($_REQUEST as $key => $value) {
+            if (in_array($key, array_keys($this->properties)))
+                $this->$key = $value;
+            //this must be a control field
+            else
+                $this->controlFields[$key] = $value;
+        }
     }
 
+    public function validate() {
+        //Check all properties including control fields from form submission
+        //ex: newpassword, newpasswordagain
+        $allProperties = array_merge($this->properties, $this->controlFields);
+        $possibleEmptyFields = array_merge(array_keys($this->optionalProperties), array_keys($this->controlFields), array($this->pkName));
+        $success = TRUE;
+        foreach ($allProperties as $field => $value) {
+            $value = \trim($value);
+            if (empty($value)) {
+                //if this $field is not allowed to be empty then set error
+                if (!in_array($field, $possibleEmptyFields)) {
+                    $this->errors[$field] = 'Vui lòng nhập thông tin.';
+                    //raise the error flag
+                    $success = FALSE;
+                }
+                //empty field so don't need to check format
+                continue;
+            }//end if (empty($value))
+            //once the $success = FALSE then it will always be FALSE
+            //See : $success=$success&&checkFormat ($success = false then checkFormat will be omitted)
+            //This is not what we want
+            $success = $this->checkFormat($field, $value) && $success;
+        }
+        return $success;
+    }
+
+    abstract function checkFormat($field, $value);
+
     public function insert() {
-        $this->errors['data'] = 'Lưu record mới thất bại. ';
         try {
             $success = $this->dataService->insert();
         } catch (\PDOException $e) {
+            $this->errors['data'] = 'Lưu record mới thất bại. ';
             //getCode() return SQL error code (PDO error code is in $e->errorInfo[1])
             $this->errors['data'] .= ($e->getCode() == '23000') ? '(Record đã tồn tại.)' : '(' . $e->errorInfo[2] . ')';
             return FALSE;
         }
-        if ($success)
-            $this->errors['data'] = '';
-        return $success;
-    }
+        if (!$success)
+            $this->errors['data'] = 'Lưu record mới thất bại. ';;
 
-    public function retrieve($pkValue) {
-        return $this->dataService->retrieve($pkValue);
+        return $success;
     }
 
     public function update() {
@@ -114,28 +184,26 @@ abstract class ObjectModel {
             $this->errors['data'] = 'Record này chưa có dữ liệu (id=0).';
             return FALSE;
         }
-        $this->errors['data'] = 'Không có record nào được cập nhật.';
         try {
             $success = $this->dataService->update();
         } catch (\PDOException $e) {
-            $this->errors['data'] .= 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
+            $this->errors['data'] = 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
             return FALSE;
         }
-        if ($success)
-            $this->errors['data'] = '';
+        if (!$success)
+            $this->errors['data'] = 'Không có record nào được cập nhật.';;
         return $success;
     }
 
     public function delete() {
-        $this->errors['data'] = 'Xóa record thất bại.';
         try {
             $success = $this->dataService->delete();
         } catch (\PDOException $e) {
-            $this->errors['data'] .= '(' . $e->errorInfo[2] . ')';
+            $this->errors['data'] = 'Xóa record thất bại.(' . $e->errorInfo[2] . ')';
             return FALSE;
         }
-        if ($success)
-            $this->errors['data'] = '';
+        if (!$success)
+            $this->errors['data'] = 'Xóa record thất bại.';
         return $success;
     }
 
@@ -145,16 +213,35 @@ abstract class ObjectModel {
         return $this->dataService->exists();
     }
 
+    public function retrieve_data() {
+        $pkName = $this->pkName;
+        $pkValue = $this->$pkName;
+        $tempObject = $this->retrieve($pkValue);
+        if ($tempObject->isEmpty()) {
+            $this->errors['data'] = 'Record không tồn tại.';
+        } else {
+            $this->properties = $tempObject->properties;
+        }
+    }
+
+    public function retrieve($pkValue) {
+        return $this->dataService->retrieve($pkValue);
+    }
+
     public function retrieve_one($wherewhat = '', $bindings = '') {
-        $this->dataService->retrieve_one($wherewhat, $bindings);
+        return $this->dataService->retrieve_one($wherewhat, $bindings);
+    }
+
+    public function retrieve_one_by_field($field, $value) {
+        return $this->dataService->retrieve_one_by_field($field, $value);
     }
 
     public function retrieve_many($wherewhat = '', $bindings = '') {
-        $this->results = $this->dataService->retrieve_many($wherewhat, $bindings);
+        return $this->dataService->retrieve_many($wherewhat, $bindings);
     }
 
     public function select($selectwhat = '*', $wherewhat = '', $bindings = '', $pdo_fetch_mode = \PDO::FETCH_ASSOC) {
-        $this->results = $this->dataService->select($selectwhat, $wherewhat, $bindings, $pdo_fetch_mode);
+        return $this->dataService->select($selectwhat, $wherewhat, $bindings, $pdo_fetch_mode);
     }
 
 }
