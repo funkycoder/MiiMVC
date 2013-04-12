@@ -7,44 +7,141 @@ use Mii\Core;
 require_once __DIR__ . '\UserData.php';
 require_once '..\Core\ObjectModel.php';
 /*
-* To change this template, choose Tools | Templates
-* and open the template in the editor.
-*/
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
 /**
-* Description of User
-*
-* @author Quan Nguyen
-*/
+ * Description of User
+ *
+ * @author Quan Nguyen
+ */
 class User extends Core\ObjectModel {
 
     protected $mailFields = array('useremail');
     protected $passwordFields = array('password', 'newpassword', 'newpasswordagain');
     protected $nameFields = array('username', 'name');
     protected $phoneFields = array('userphone');
-  
+
+    const SESSION_TIME_LIMIT = 900; //15*60 = 15 minutes
+    const COOKIE_EXPIRE = 8640000; //60*60*24*100 seconds = 100 days by default
+    const COOKIE_PATH = "/"; //Available in whole domain
 
     public function __construct() {
         parent::__construct(new UserData(), 'userid', array('username', 'useremail', 'password', 'userphone'), array('salt', 'hash', 'timestamp'), 'users');
+        if (!isset($_SESSION)) {
+            session_start();
+            ob_start();
+        }
+    }
+
+    public function checkLogin() {
+        if (isset($_SESSION['user']) && isset($_SESSION['start'])) {
+            $this->properties = $_SESSION['user'];
+            $hashOK = $this->dataService->checkHash();
+            if (!$hashOK) {
+                $this->errors['login'] = 'Account này đang được đăng nhập ở một máy khác. Vui lòng đăng nhập lại.';
+            } elseif ($this->sessionTimeOut()) {
+                $this->errors['login'] = 'Phiên làm việc hết giờ (Session timeout). Vui lòng đăng nhập lại.';
+            } else {
+                //hash ok and session is not timeout
+                return TRUE;
+            }
+            //error
+            $this->unsetUserSession();
+            return FALSE;
+        } elseif (isset($_COOKIE['userid']) && isset($_COOKIE['hash'])) {
+            $tempObject = $this->dataService->retrieve($_COOKIE['userid']);
+            //correct userid? get properties from database
+            if ($tempObject->isEmpty()) {
+                $this->unsetUserCookie();
+                return FALSE;
+            }
+            $this->properties = $tempObject->properties;
+            $this->setUserSession();
+            return TRUE;
+        } else {
+            //No session, no cookie?
+            return FALSE;
+        }
     }
 
     public function login() {
-        return $this->dataService->login();
+        $success = $this->dataService->checkPassword();
+        if (!$success) {
+            $this->errors['login'] = 'Đăng nhập thất bại. (Email/Password không đúng)';            
+            return FALSE;
+        }
+        $hashOK = $this->dataService->insertHash();
+        if (!$hashOK) {
+            $this->errors['login'] = 'Đăng nhập thất bại. Lỗi hệ thống. Xin thử lại.';
+            return FALSE;
+        }
+        //Set user session now.
+        $this->setUserSession();
+        //Remember login credentials ? set Cookie
+        if (isset($this->controlFields['remember'])) {
+            $this->setUserCookie();
+        }
+        return TRUE;
     }
 
-    public function checkLogin(){
-        return $this->dataService->checkLogin();
+     public function register() {
+         $emailTaken = $this->dataService->checkEmailTaken();
+         if ($emailTaken) {
+             $this->errors['register']='Email đã đăng ký. Xin vui lòng chọn email khác.';
+             return FALSE;
+         }
+         $success = $this->insert();
+         If (!$success) {
+             $this->errors['register']='Lỗi hệ thống. Xin vui lòng thử lại.';
+         }
+        return $success;
     }
     
-    //TODO DElete this after debugging
-    public function unsetUserSession (){
-        $this->dataService->unsetUserSession();
+    private function sessionTimeOut() {
+        $now = time();
+        if ($now > $_SESSION['start'] + self::SESSION_TIME_LIMIT) {
+            return true;
+        } else {
+            $_SESSION['start'] = time();
+            return false;
+        }
     }
+
+    private function setUserSession() {
+        //new session id. This generate $_COOKIE[PHPSESSID]
+        session_regenerate_id();
+        //store object properties only
+        $_SESSION['user'] = $this->properties;
+        $_SESSION['start'] = time();
+    }
+
+//TODO Change this back to private after debug
+    public function unsetUserSession() {
+        $_SESSION = array();
+        session_destroy();
+        //remove also the cookie
+        $this->unsetUserCookie();
+    }
+
+    private function setUserCookie() {
+        setcookie("userid", $this->userid, time() + self::COOKIE_EXPIRE, self::COOKIE_PATH);
+        setcookie("hash", $this->hash, time() + self::COOKIE_EXPIRE, self::COOKIE_PATH);
+    }
+
+//TODO change this back to private after debugging
+    public function unsetUserCookie() {
+        foreach (array_keys($_COOKIE) as $cookieName) {
+            setcookie($cookieName, '', time() - self::COOKIE_EXPIRE, self::COOKIE_PATH);
+        }
+// if (isset($_COOKIE[session_name()])) {
+// setcookie(session_name(), "", time() - self::COOKIE_EXPIRE, self::COOKIE_PATH);
+// }
+    }
+
     
-    //TODO Delete this after debugging
-    public function unsetUserCookie(){
-        $this->dataService->unsetUserCookie();
-    }
+
     public function checkFormat($field, $value) {
         switch ($field) {
             case in_array($field, $this->mailFields):
@@ -69,12 +166,11 @@ class User extends Core\ObjectModel {
                 return TRUE;
         }
         if (!preg_match($regex, $value)) {
-            $this->errors[$field]=$error;
+            $this->errors[$field] = $error;
             return FALSE;
         }
         return TRUE;
     }
-
 
 }
 

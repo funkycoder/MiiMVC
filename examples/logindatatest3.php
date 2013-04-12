@@ -6,7 +6,7 @@ require_once '..\Login\Model\User.php';
 
 $user = new Model\User();
 
-$user->useremail = 'toan@gmail.com';
+$user->useremail = 'thelu@gmail.com';
 $user->username='Toan';
 $user->password='Pique2983';
 $user->userphone='940394034';
@@ -15,6 +15,5 @@ $user->setControlFields('remember', 'on');
 
 
 
-$user->login();
-$user->checkLogin();
+$user->register();
 ?>
