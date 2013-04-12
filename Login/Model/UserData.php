@@ -17,32 +17,10 @@ require_once '..\Core\DataModel.php';
  */
 class UserData extends Core\DataModel {
     #####################################################################################################################
-    # #
-    # DATAMODEL EXTENSION - ALL FUNCTIONS WHICH DEAL WITH DATABASE ARE DEFINED HERE #
-    # #
+    #                                                                                                                  ##
+    #               SPECIFIC USERDATA FUNCTIONS HERE                                                                   ##
+    #                                                                                                                  ##
     #####################################################################################################################
-
-    public function insert() {
-        $myObject = $this->myObject;
-        $myObject->salt = time();
-        $myObject->timestamp = time();
-        $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
-        return parent::insert();
-    }
-
-    public function insertHash() {
-        $this->myObject->hash = md5(microtime());
-        return parent::update();
-    }
-
-    public function update($UPDATE_PASSWORD = FALSE) {
-        $myObject = $this->myObject;
-        $myObject->timestamp = time();
-        IF ($UPDATE_PASSWORD) {
-            $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
-        }
-        return parent::update();
-    }
 
     public function checkEmailTaken() {
         $tempObject = $this->retrieve_one_by_field('useremail', $this->myObject->useremail);
@@ -61,6 +39,11 @@ class UserData extends Core\DataModel {
         return FALSE;
     }
 
+    public function encryptPassword($salt, $password) {
+        //sha1 required 40 characters
+        return sha1($salt . $password);
+    }
+
     public function checkHash() {
         $myObject = $this->myObject;
         $pkName = $this->pkName;
@@ -68,9 +51,34 @@ class UserData extends Core\DataModel {
         return ($tempObject->hash == $myObject->hash);
     }
 
-    public function encryptPassword($salt, $password) {
-        //sha1 required 40 characters
-        return sha1($salt . $password);
+    public function insertHash() {
+        $this->myObject->hash = md5(microtime());
+        return parent::update();
     }
+
+    #####################################################################################################################
+    #                                                                                                                  ##
+    #               THE FOLLOWING FUNCTIONS HAD EXCEPTION HANDLER DEFINED IN OBJECT MODEL                              ##
+    #                                                                                                                  ##
+    #####################################################################################################################
+
+    public function insert() {
+        $myObject = $this->myObject;
+        $myObject->salt = time();
+        $myObject->timestamp = time();
+        $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
+        return parent::insert();
+    }
+
+    public function update($UPDATE_PASSWORD = FALSE) {
+        $myObject = $this->myObject;
+        $myObject->timestamp = time();
+        IF ($UPDATE_PASSWORD) {
+            $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
+        }
+        return parent::update();
+    }
+
 }
+
 ?>

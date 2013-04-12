@@ -20,7 +20,7 @@ class User extends Core\ObjectModel {
 
     protected $mailFields = array('useremail');
     protected $passwordFields = array('password', 'newpassword', 'newpasswordagain');
-    protected $nameFields = array('username', 'name');
+    protected $nameFields = array('username');
     protected $phoneFields = array('userphone');
 
     const SESSION_TIME_LIMIT = 900; //15*60 = 15 minutes
@@ -32,7 +32,7 @@ class User extends Core\ObjectModel {
         if (!isset($_SESSION)) {
             session_start();
             ob_start();
-        }
+        }        
     }
 
     public function checkLogin() {
@@ -69,7 +69,7 @@ class User extends Core\ObjectModel {
     public function login() {
         $success = $this->dataService->checkPassword();
         if (!$success) {
-            $this->errors['login'] = 'Đăng nhập thất bại. (Email/Password không đúng)';            
+            $this->errors['login'] = 'Đăng nhập thất bại. (Email/Password không đúng)';
             return FALSE;
         }
         $hashOK = $this->dataService->insertHash();
@@ -86,19 +86,19 @@ class User extends Core\ObjectModel {
         return TRUE;
     }
 
-     public function register() {
-         $emailTaken = $this->dataService->checkEmailTaken();
-         if ($emailTaken) {
-             $this->errors['register']='Email đã đăng ký. Xin vui lòng chọn email khác.';
-             return FALSE;
-         }
-         $success = $this->insert();
-         If (!$success) {
-             $this->errors['register']='Lỗi hệ thống. Xin vui lòng thử lại.';
-         }
+    public function register() {
+        $emailTaken = $this->dataService->checkEmailTaken();
+        if ($emailTaken) {
+            $this->errors['register'] = 'Email đã đăng ký. Xin vui lòng chọn email khác.';
+            return FALSE;
+        }
+        $success = $this->insert();
+        If (!$success) {
+            $this->errors['register'] = 'Lỗi hệ thống. Xin vui lòng thử lại.';
+        }
         return $success;
     }
-    
+
     private function sessionTimeOut() {
         $now = time();
         if ($now > $_SESSION['start'] + self::SESSION_TIME_LIMIT) {
@@ -140,7 +140,34 @@ class User extends Core\ObjectModel {
 // }
     }
 
-    
+    //Override update() function in ObjectModel
+    public function update() {
+        $UPDATE_PASSWORD = FALSE;
+        if ($this->controlFields['newpassword']) {
+            if (!($this->controlFields['newpassword'] == $this->controlFields['newpasswordagain'])) {
+                $this->errors['newpasswordagain'] = 'Password mới không trùng khớp.';
+                return FALSE;
+            } else {
+                //password fields match
+                $this->password = $this->controlFields['newpassword'];
+                $UPDATE_PASSWORD = TRUE;
+            }
+        }
+        try {
+            $success = $this->dataService->update($UPDATE_PASSWORD);
+        } catch (\PDOException $e) {
+            $this->errors['data'] = 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
+            return FALSE;
+        }
+        if (!$success)
+            $this->errors['data'] = 'Không có record nào được cập nhật.';;
+        return $success;       
+    }
+
+    function logout() {
+        $this->unsetUserSession();
+        $this->unsetUserCookie();
+    }
 
     public function checkFormat($field, $value) {
         switch ($field) {

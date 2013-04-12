@@ -94,13 +94,14 @@ abstract class ObjectModel {
     public function getControlFields() {
         return $this->controlFields;
     }
+
 //TODO delete this after testing
-    public function setControlFields($field, $value) {
+    public function setControlField($field, $value) {
         $this->controlFields[$field] = $value;
     }
-
-    public function getResults() {
-        return $this->results;
+    //TODO To delete
+    public function setControlFields($controlFields=  array()){
+        $this->controlFields = array_merge($this->controlFields,$controlFields);
     }
 
     public function getErrors() {
@@ -129,7 +130,7 @@ abstract class ObjectModel {
         //then assign it the corresponding $key in properties
         foreach ($_REQUEST as $key => $value) {
             if (in_array($key, array_keys($this->properties)))
-                $this->$key = $value;
+                $this->$key = is_scalar($value) ? trim($value) : $value;
             //this must be a control field
             else
                 $this->controlFields[$key] = $value;
@@ -143,7 +144,7 @@ abstract class ObjectModel {
         $possibleEmptyFields = array_merge(array_keys($this->optionalProperties), array_keys($this->controlFields), array($this->pkName));
         $success = TRUE;
         foreach ($allProperties as $field => $value) {
-            $value = \trim($value);
+            //form_filled already trim the entered value
             if (empty($value)) {
                 //if this $field is not allowed to be empty then set error
                 if (!in_array($field, $possibleEmptyFields)) {
