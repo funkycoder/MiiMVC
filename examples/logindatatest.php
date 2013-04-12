@@ -15,6 +15,5 @@ $user->setControlFields('remember', 'on');
 
 
 
-$user->login();
-$user->checkLogin();
+$test = $user->login();
 ?>

@@ -3,9 +3,11 @@
 namespace Mii\Login\Model;
 
 use Mii\Core;
+use Mii\Login\Service;
 
 require_once __DIR__ . '\UserData.php';
 require_once '..\Core\ObjectModel.php';
+require_once '..\Login\Service\UserService.php';
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
@@ -25,26 +27,13 @@ class User extends Core\ObjectModel {
   
 
     public function __construct() {
-        parent::__construct(new UserData(), 'userid', array('username', 'useremail', 'password', 'userphone'), array('salt', 'hash', 'timestamp'), 'users');
+        parent::__construct(new Service\UserService(), 'userid', array('username', 'useremail', 'password', 'userphone'), array('salt', 'hash', 'timestamp'), 'users');
     }
 
     public function login() {
         return $this->dataService->login();
     }
 
-    public function checkLogin(){
-        return $this->dataService->checkLogin();
-    }
-    
-    //TODO DElete this after debugging
-    public  function unsetUserSession (){
-        $this->dataService->unsetUserSession();
-    }
-    
-    //TODO Delete this after debugging
-    public function unsetUserCookie(){
-        $this->dataService->unsetUserCookie();
-    }
     public function checkFormat($field, $value) {
         switch ($field) {
             case in_array($field, $this->mailFields):
