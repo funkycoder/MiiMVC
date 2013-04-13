@@ -2,19 +2,22 @@
 
 namespace Mii\Login\Model;
 
+use Mii;
 use Mii\Core;
 
 require_once __DIR__ . '\UserData.php';
 require_once '..\Core\ObjectModel.php';
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
+//=============================================================================================
+// User object
+//============================================================================================
 /**
- * Description of User
- *
- * @author Quan Nguyen
+ * User object in Login system, this object extends object model MiiMVC core
+ * 
+ * @version 1.0 (13 of April, 2013)
+ * @license http://www.gnu.org/licenses/gpl-3.0.html GPLv3
+ * @author Quan Nguyen <bsquan2009@yahoo.com> http://drquan.net
+ * @copyright (c) 2013, Quan Nguyen 
  */
 class User extends Core\ObjectModel {
 
@@ -23,18 +26,24 @@ class User extends Core\ObjectModel {
     protected $nameFields = array('username');
     protected $phoneFields = array('userphone');
 
-    const SESSION_TIME_LIMIT = 900; //15*60 = 15 minutes
-    const COOKIE_EXPIRE = 8640000; //60*60*24*100 seconds = 100 days by default
-    const COOKIE_PATH = "/"; //Available in whole domain
-
     public function __construct() {
         parent::__construct(new UserData(), 'userid', array('username', 'useremail', 'password', 'userphone'), array('salt', 'hash', 'timestamp'), 'users');
         if (!isset($_SESSION)) {
             session_start();
             ob_start();
-        }        
+        }
     }
 
+    /**
+     * This user logged in ?
+     * 
+     * Check whether the correct session is set? then check the hash
+     * If session not set, check whether the correct cookie is set?
+     * Else clear all sessions and cookies
+     * $error['login'] will be set if not successful
+     * 
+     * @return boolean Logged in?
+     */
     public function checkLogin() {
         if (isset($_SESSION['user']) && isset($_SESSION['start'])) {
             $this->properties = $_SESSION['user'];
@@ -66,6 +75,16 @@ class User extends Core\ObjectModel {
         }
     }
 
+    /**
+     * Log this user in
+     * 
+     * Check the provided password
+     * Insert the hash then set the session
+     * If remember me set then set cookies
+     * $error['login'] will be set if not successful
+     * 
+     * @return boolean login successful?
+     */
     public function login() {
         $success = $this->dataService->checkPassword();
         if (!$success) {
@@ -86,6 +105,14 @@ class User extends Core\ObjectModel {
         return TRUE;
     }
 
+    /**
+     * Register the current user to database
+     * 
+     * Email taken? if not then insert to database
+     * $errors['register'] will be set if not successful
+     * 
+     * @return boolean Register successfuly
+     */
     public function register() {
         $emailTaken = $this->dataService->checkEmailTaken();
         if ($emailTaken) {
@@ -126,14 +153,14 @@ class User extends Core\ObjectModel {
     }
 
     private function setUserCookie() {
-        setcookie("userid", $this->userid, time() + self::COOKIE_EXPIRE, self::COOKIE_PATH);
-        setcookie("hash", $this->hash, time() + self::COOKIE_EXPIRE, self::COOKIE_PATH);
+        setcookie("userid", $this->userid, time() + Mii\Settings::$COOKIE_EXPIRE, Mii\Settings::$COOKIE_PATH);
+        setcookie("hash", $this->hash, time() + Mii\Settings::$COOKIE_EXPIRE, Mii\Settings::$COOKIE_PATH);
     }
 
 //TODO change this back to private after debugging
     public function unsetUserCookie() {
         foreach (array_keys($_COOKIE) as $cookieName) {
-            setcookie($cookieName, '', time() - self::COOKIE_EXPIRE, self::COOKIE_PATH);
+            setcookie($cookieName, '', time() - Mii\Settings::$COOKIE_EXPIRE, Mii\Settings::$COOKIE_PATH);
         }
 // if (isset($_COOKIE[session_name()])) {
 // setcookie(session_name(), "", time() - self::COOKIE_EXPIRE, self::COOKIE_PATH);
@@ -161,14 +188,26 @@ class User extends Core\ObjectModel {
         }
         if (!$success)
             $this->errors['data'] = 'Không có record nào được cập nhật.';;
-        return $success;       
+        return $success;
     }
 
-    function logout() {
+    /**
+     * Logout
+     */
+    public function logout() {
         $this->unsetUserSession();
         $this->unsetUserCookie();
     }
 
+    /**
+     * Check whether a value is in correct format using regex
+     * 
+     * This method must be implemented as the object model only has abstract function
+     * $error['$field'] will be set if the value is not in correct format
+     * @param type $field field name
+     * @param type $value value needs to be checked
+     * @return boolean in correct format ?
+     */
     public function checkFormat($field, $value) {
         switch ($field) {
             case in_array($field, $this->mailFields):

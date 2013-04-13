@@ -1,7 +1,8 @@
 <?php
 
 namespace Mii\Core;
-
+use Mii;
+require_once '..\Config\Settings.php';
 //===============================================================
 // Data Service Model/ORM
 //===============================================================
@@ -12,7 +13,7 @@ namespace Mii\Core;
  * Data objects that extend the Model class will gain the following 6 operations: Select,Insert, Retrieve, Update, Delete and Exists.
  * This Model is inspired by Eric Koh's work. Most of the original codes were rewritten or improved.
  * 
- * @version 1.0
+ * @version 1.0 (13 of April, 2013)
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPLv3
  * @author Quan Nguyen <bsquan2009@yahoo.com> http://drquan.net
  * @copyright (c) 2013, Quan Nguyen 
@@ -20,26 +21,9 @@ namespace Mii\Core;
  * @copyright (c) 2008-2012, Eric Koh {kissmvc.php version 0.72}
  */
 abstract class DataModel {
-
-    protected $QUOTE_STYLE; // valid types are MYSQL,MSSQL,ANSI
-    protected $COMPRESS_ARRAY; //valid only for MySQL BLOB field
-    protected $myObject;
-    protected $pkName;
-    protected $tableName;
-
-    //Database credentials
-
-    const DB_SERVER = "localhost";
-    const DB_NAME = "user";
-    const DB_USER_READ = "user_read";
-    const DB_PASSWORD_READ = "read";
-    const DB_USER_WRITE = "user_write";
-    const DB_PASSWORD_WRITE = "write";
-
-    function __construct($quoteStyle = 'MYSQL', $compressArray = true) {
-        $this->QUOTE_STYLE = $quoteStyle;
-        $this->COMPRESS_ARRAY = $compressArray;
-    }
+    protected $myObject; //Related object
+    protected $pkName; //Keep primary key
+    protected $tableName; // Table name
 
     public function initDataService(ObjectModel $myObject, $pkName = '', $tableName = '') {
         $this->myObject = $myObject;
@@ -48,7 +32,7 @@ abstract class DataModel {
     }
 
     protected function enquote($name) {
-        switch ($this->QUOTE_STYLE) {
+        switch (Mii\Settings::$QUOTE_STYLE) {
             case 'MYSQL' :
                 return '`' . $name . '`';
             case 'MSSQL' :
@@ -62,12 +46,12 @@ abstract class DataModel {
 
     protected function getConnection($usertype = 'read') {
         //$dsn = 'sqlite:'.APP_PATH.'db/dbname.sqlite';
-        $dsn = 'mysql:dbname=' . self::DB_NAME . ';host=' . self::DB_SERVER;
+        $dsn = 'mysql:dbname=' . Mii\Settings::$DB_NAME . ';host=' . Mii\Settings::$DB_SERVER;
         try {
             if ($usertype == 'read') {
-                $conn = new \PDO($dsn, self::DB_USER_READ, self::DB_PASSWORD_READ);
+                $conn = new \PDO($dsn, Mii\Settings::$DB_USER_READ, Mii\Settings::$DB_PASSWORD_READ);
             } elseif ($usertype == 'write') {
-                $conn = new \PDO($dsn, self::DB_USER_WRITE, self::DB_PASSWORD_WRITE);
+                $conn = new \PDO($dsn, Mii\Settings::$DB_USER_WRITE, Mii\Settings::$DB_PASSWORD_WRITE);
             } else {
                 throw new \Exception('Unregconized connection type.');
             }
@@ -83,13 +67,19 @@ abstract class DataModel {
     protected function deflateValue($value) {
         //serialize will store a string representation for the data value (array is ok) 
         //then this string will be compressed by gzdeflate!
-        return $this->COMPRESS_ARRAY ? \gzdeflate(\serialize($value)) : \serialize($value);
+        return Mii\Settings::$COMPRESS_ARRAY ? \gzdeflate(\serialize($value)) : \serialize($value);
     }
 
     protected function inflateValue($value) {
-        return \unserialize($this->COMPRESS_ARRAY ? \gzinflate($value) : $value);
+        return \unserialize(Mii\Settings::$COMPRESS_ARRAY ? \gzinflate($value) : $value);
     }
 
+     ####################################################################################################################
+    #                                                                                                                  ##
+    #               THE FOLLOWING FUNCTIONS WILL BE HANDLED IN OBJECTMODEL FUNCTIONS                                   ##
+    #                                                                                                                  ##
+    #####################################################################################################################
+    
     //Inserts record into database with a new auto-incremented primary key
     public function insert() {
         $conn = $this->getConnection('write');
@@ -219,18 +209,6 @@ abstract class DataModel {
         return $this->select('*', $wherewhat, $bindings);
     }
 
-    /**
-     * Select multiple records base on input criterion
-     * 
-     * @example $user = new User();
-     * @example $result_array = $user->select("username,password", "username LIKE ?", 'Q%');
-     * @example print_r($result_array);
-     * @param string $selectwhat
-     * @param string $wherewhat
-     * @param array $bindings A string is also accepted
-     * @param PDO::FETCH_* $pdo_fetch_mode
-     * @return array An array of returned records
-     */
     function select($selectwhat = '*', $wherewhat = '', $bindings = '') {
         //get read connection
         $conn = $this->getConnection();

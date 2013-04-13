@@ -5,15 +5,18 @@ namespace Mii\Login\Model;
 use Mii\Core;
 
 require_once '..\Core\DataModel.php';
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of UserService
- *
- * @author Quan Nguyen
+//=============================================================================================
+// UserData 
+//============================================================================================
+/* UserData object
+ * 
+ * Data object in Login system, this object extends data model MiiMVC core
+ * 
+ * This class deal with all database operations
+ * @version 1.0 (13 of April, 2013)
+ * @license http://www.gnu.org/licenses/gpl-3.0.html GPLv3
+ * @author Quan Nguyen <bsquan2009@yahoo.com> http://drquan.net
+ * @copyright (c) 2013, Quan Nguyen 
  */
 class UserData extends Core\DataModel {
     #####################################################################################################################
