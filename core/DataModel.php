@@ -1,8 +1,8 @@
 <?php
 
 namespace Mii\Core;
-use Mii;
-require_once '..\Config\Settings.php';
+require_once '..\Config\appconfig.php'; //TODO Change this absolute path when go Live
+
 //===============================================================
 // Data Service Model/ORM
 //===============================================================
@@ -24,6 +24,11 @@ abstract class DataModel {
     protected $myObject; //Related object
     protected $pkName; //Keep primary key
     protected $tableName; // Table name
+    protected $appConfig;
+
+    public function __construct() {
+        $this->appConfig = \AppConfig::getInstance();        
+    }
 
     public function initDataService(ObjectModel $myObject, $pkName = '', $tableName = '') {
         $this->myObject = $myObject;
@@ -32,46 +37,22 @@ abstract class DataModel {
     }
 
     protected function enquote($name) {
-        switch (Mii\Settings::$QUOTE_STYLE) {
-            case 'MYSQL' :
-                return '`' . $name . '`';
-            case 'MSSQL' :
-                return '[' . $name . ']';
-            case 'ANSI':
-                return '"' . $name . '"';
-            default :
-                return $name;
-        }
+        return $this->appConfig->enquote($name);
     }
 
     protected function getConnection($usertype = 'read') {
-        //$dsn = 'sqlite:'.APP_PATH.'db/dbname.sqlite';
-        $dsn = 'mysql:dbname=' . Mii\Settings::$DB_NAME . ';host=' . Mii\Settings::$DB_SERVER;
-        try {
-            if ($usertype == 'read') {
-                $conn = new \PDO($dsn, Mii\Settings::$DB_USER_READ, Mii\Settings::$DB_PASSWORD_READ);
-            } elseif ($usertype == 'write') {
-                $conn = new \PDO($dsn, Mii\Settings::$DB_USER_WRITE, Mii\Settings::$DB_PASSWORD_WRITE);
-            } else {
-                throw new \Exception('Unregconized connection type.');
-            }
-            $conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-            $conn->exec('SET NAMES "utf8"');
-        } catch (\PDOException $e) {
-
-            throw new \Exception('Connection failed: ' . $e->getMessage());
-        }
-        return $conn;
+       
+       return $this->appConfig->getConnection($usertype);
     }
 
     protected function deflateValue($value) {
         //serialize will store a string representation for the data value (array is ok) 
         //then this string will be compressed by gzdeflate!
-        return Mii\Settings::$COMPRESS_ARRAY ? \gzdeflate(\serialize($value)) : \serialize($value);
+        return COMPRESS_ARRAY ? \gzdeflate(\serialize($value)) : \serialize($value);
     }
 
     protected function inflateValue($value) {
-        return \unserialize(Mii\Settings::$COMPRESS_ARRAY ? \gzinflate($value) : $value);
+        return \unserialize(COMPRESS_ARRAY ? \gzinflate($value) : $value);
     }
 
      ####################################################################################################################

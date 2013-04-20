@@ -2,7 +2,6 @@
 
 namespace Mii\Core;
 
-require_once __DIR__ . '/DataModel.php'; //Corresponding database actions
 //=============================================================================================
 // Object Model
 //============================================================================================
@@ -211,7 +210,7 @@ abstract class ObjectModel {
         } catch (\PDOException $e) {
             $this->errors['data'] = 'Lưu record mới thất bại. ';
             //getCode() return SQL error code (PDO error code is in $e->errorInfo[1])
-            $this->errors['data'] .= ($e->getCode() == '23000') ? '(Record đã tồn tại.)' : '(' . $e->errorInfo[2] . ')';
+            $this->errors['data'] .= ($e->getCode() == '23000') ? '(Record đã tồn tại.)' : '(' . $e->getMessage() . ')';
             return FALSE;
         }
         if (!$success)
@@ -234,7 +233,7 @@ abstract class ObjectModel {
         try {
             $success = $this->dataService->update();
         } catch (\PDOException $e) {
-            $this->errors['data'] = 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
+            $this->errors['data'] = 'Cập nhật record thất bại. (' . $e->getMessage() . ')';
             return FALSE;
         }
         if (!$success)
@@ -252,7 +251,7 @@ abstract class ObjectModel {
         try {
             $success = $this->dataService->delete();
         } catch (\PDOException $e) {
-            $this->errors['data'] = 'Xóa record thất bại.(' . $e->errorInfo[2] . ')';
+            $this->errors['data'] = 'Xóa record thất bại.(' . $e->getMessage() . ')';
             return FALSE;
         }
         if (!$success)
