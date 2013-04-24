@@ -2,11 +2,10 @@
 
 namespace Mii\Login\Model;
 
-use Mii;
 use Mii\Core;
 
 require_once __DIR__ . '\UserData.php';
-require_once '..\Core\ObjectModel.php';
+require_once '..\core\ObjectModel.php';
 
 //=============================================================================================
 // User object
@@ -21,15 +20,16 @@ require_once '..\Core\ObjectModel.php';
  */
 class User extends Core\ObjectModel {
 
+    public $logged_in = FALSE;
     protected $mailFields = array('useremail');
     protected $passwordFields = array('password', 'newpassword', 'newpasswordagain');
-    protected $nameFields = array('username');
+    protected $nameFields = array('username', 'first_name', 'last_name');
     protected $phoneFields = array('userphone');
 
     public function __construct() {
         $expectedFields = array('username', 'first_name', 'last_name', 'useremail', 'password', 'userphone');
         $optionalFields = array('type', 'salt', 'hash', 'date_created', 'date_modified', 'date_expires');
-        parent::__construct(new UserData(), 'userid', $expectedFields, $optionalFields, 'users');
+        parent::__construct(new UserData(), 'userid', $expectedFields, $optionalFields, USER_TABLE);
         if (!isset($_SESSION)) {
             session_start();
             ob_start();
@@ -47,6 +47,7 @@ class User extends Core\ObjectModel {
      * @return boolean Logged in?
      */
     public function checkLogin() {
+        $this->logged_in = FALSE;
         if (isset($_SESSION['user']) && isset($_SESSION['start'])) {
             $this->properties = $_SESSION['user'];
             $hashOK = $this->dataService->checkHash();
@@ -56,7 +57,7 @@ class User extends Core\ObjectModel {
                 $this->errors['login'] = 'Phiên làm việc hết giờ (Session timeout). Vui lòng đăng nhập lại.';
             } else {
                 //hash ok and session is not timeout
-                return TRUE;
+                return $this->logged_in = TRUE;
             }
             //error
             $this->unsetUserSession();
@@ -71,7 +72,7 @@ class User extends Core\ObjectModel {
             }
             $this->properties = $tempObject->properties;
             $this->setUserSession();
-            return TRUE;
+            return $this->logged_in = TRUE;
         } else {
             //No session, no cookie?
             return FALSE;
@@ -89,6 +90,7 @@ class User extends Core\ObjectModel {
      * @return boolean login successful?
      */
     public function login() {
+        $this->logged_in = FALSE;
         $success = $this->dataService->checkPassword();
         if (!$success) {
             $this->errors['login'] = 'Đăng nhập thất bại. (Email/Password không đúng)';
@@ -105,7 +107,7 @@ class User extends Core\ObjectModel {
         if (isset($this->controlFields['remember'])) {
             $this->setUserCookie();
         }
-        return TRUE;
+        return $this->logged_in = TRUE;
     }
 
     /**
@@ -117,14 +119,27 @@ class User extends Core\ObjectModel {
      * @return boolean Register successfuly
      */
     public function register() {
-        $emailTaken = $this->dataService->checkEmailTaken();
-        if ($emailTaken) {
-            $this->errors['register'] = 'Email đã đăng ký. Xin vui lòng chọn email khác.';
-            return FALSE;
+        $success = FALSE;
+        $registeredUsers = $this->retrieve_many('username=? OR useremail=?', array($this->username, $this->useremail));
+        //This account registered?
+        if (count($registeredUsers) > 1) { //Both are taken
+            $this->errors['useremail'] = 'Email đã đăng ký. Xin vui lòng chọn email khác.';
+            $this->errors['username'] = 'Username đã đăng ký. Xin vui lòng chọn username khác.';
+        } else if (count($registeredUsers) == 1) { //Either is taken
+            //Get the information
+            $regUser = $registeredUsers[0];
+            if ($this->useremail == $regUser->useremail)
+                $this->errors['useremail'] = 'Email đã đăng ký. Xin vui lòng chọn email khác.';
+            if ($this->username == $regUser->username)
+                $this->errors['username'] = 'Username đã đăng ký. Xin vui lòng chọn username khác.';
+            if ($this->useremail == $regUser->useremail && $this->username == $regUser->username)
+                $this->errors['register'] = 'Tài khoản đã được đăng ký. Nếu quên mật khẩu, xin vui lòng dùng link phía bên phải.';
         }
-        $success = $this->insert();
-        If (!$success) {
-            $this->errors['register'] = 'Lỗi hệ thống. Xin vui lòng thử lại.';
+        else { // This account not registered before,ok to proceed
+            $success = $this->insert();
+            If (!$success) {
+                $this->errors['register'] = 'Lỗi hệ thống. Xin vui lòng thử lại.';
+            }
         }
         return $success;
     }
@@ -203,6 +218,7 @@ class User extends Core\ObjectModel {
     public function logout() {
         $this->unsetUserSession();
         $this->unsetUserCookie();
+        $this->logged_in = FALSE;
     }
 
     /**
@@ -242,6 +258,25 @@ class User extends Core\ObjectModel {
             return FALSE;
         }
         return TRUE;
+    }
+
+// ******************************************* //
+// ************ REDIRECT FUNCTION ************ //
+// This next block is added in Chapter 4.
+// This function redirects invalid users.
+// It takes two arguments: 
+// - The session element to check
+// - The destination to where the user will be redirected. 
+    public function redirect($protocol = 'http://') {
+        // Check for the session item:
+        $url = $protocol . REDIRECT_URL; // Define the URL.
+        header("Location: $url");
+        exit(); // Quit the script.
+    }
+
+    //TODO CHeck this time function
+    public function getExpires() {
+        return ($this->date_expires > date(time()));
     }
 
 }

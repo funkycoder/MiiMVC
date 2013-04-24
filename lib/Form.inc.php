@@ -13,34 +13,51 @@
  * checkMissingFields($expected, $required = null)
  */
 
-namespace Mii;
+namespace Mii\Lib;
 
 class Mii_Form {
 
-    /**
-     * Sanitize input data (recursive function)
-     * 
-     * Source: PHP for Absolute Beginners / Jason Lengstorf/ Apress/ 2009
-     * Version : 1.1
-     * Date : 27/02/2013
-     * Modified date:
-     * Modified by : 
-     * Reason:     
-     * 
-     * @param string or array $data data to be sanitized
-     * @param string $allowableTags tags allowed
-     * @param boolean $htmlEntity convert sanitized data to htmlEntities
-     * @return sanitized data
-     */
-    public static function sanitizeData($data, $allowableTags = NULL, $htmlEntity = FALSE) {
-        if (!is_array($data)) {
+// This script defines any functions required by the various forms.
+// This script is created in Chapter 4.
+// This function generates a form INPUT or TEXTAREA tag.
+// It takes three arguments:
+// - The name to be given to the element.
+// - The type of element (text, password, textarea).
+// - An array of errors.
+    public static function create_form_input($name, $value, $type, $errors) {
 
-            $stripTag = strip_tags(trim($data), $allowableTags);
-            return ($htmlEntity) ? htmlentities($stripTag, ENT_COMPAT, 'UTF-8') : $stripTag;
-        } else {
-            return array_map('sanitizeData', $data);
-        }
+        // Conditional to determine what kind of element to create:
+        if (($type == 'text') || ($type == 'password')) { // Create text or password inputs.
+            // Start creating the input:
+            echo '<input type="' . $type . '" name="' . $name . '" id="' . $name . '"';
+            // Add the value to the input. $value already sanitized and converted to htmlentity (in object model)
+            // Don't display the password again
+            if ($type=='text')
+                echo ' value="' . $value . '"';
+            // Check for an error:
+            if (array_key_exists($name, $errors)) {
+                echo 'class="error" /> <span class="error">' . $errors[$name] . '</span>';
+            } else {
+                echo ' />';
+            }
+        } elseif ($type == 'textarea') { // Create a TEXTAREA.
+            // Display the error first: 
+            if (array_key_exists($name, $errors))
+                echo ' <span class="error">' . $errors[$name] . '</span>';
+            // Start creating the textarea:
+            echo '<textarea name="' . $name . '" id="' . $name . '" rows="5" cols="75"';
+            // Add the error class, if applicable:
+            if (array_key_exists($name, $errors)) {
+                echo ' class="error">';
+            } else {
+                echo '>';
+            }
+            // Complete the textarea:
+            echo '</textarea>';
+        } // End of primary IF-ELSE.
     }
+
+// End of the create_form_input() function.
 
     /**
      * Check the $_POST variables for required fields that have been left blank

@@ -5,8 +5,8 @@ require_once '..\Login\Model\User.php';
 
 $user = new Model\User();
 //$user->userid=1;
-$user->useremail = 'hoadiemt@gmail.com';
-$user->username='Thienlu';
+$user->useremail = 'hoadiemt2@gmail.com';
+$user->username='Thienlu2';
 $user->first_name='Quan';
 $user->last_name='Nguyen';
 $user->password='1234Pa5678';

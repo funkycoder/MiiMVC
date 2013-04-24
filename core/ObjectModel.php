@@ -2,6 +2,9 @@
 
 namespace Mii\Core;
 
+require_once __DIR__ . '/Settings.php';
+require_once \Settings::$APP_CONFIG_FILE;
+
 //=============================================================================================
 // Object Model
 //============================================================================================
@@ -13,13 +16,11 @@ namespace Mii\Core;
  * DataModel have exception handling implemented here. So, it is recommended to call those function using this obj reference
  * 
  * Remember : Must define properties with the same names as database column names for the framework to work
- * 
  * @version 1.0 (13 of April, 2013)
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPLv3
  * @author Quan Nguyen <bsquan2009@yahoo.com> http://drquan.net
  * @copyright (c) 2013, Quan Nguyen 
  */
-
 abstract class ObjectModel {
 
     protected $pkName; //primary key name
@@ -149,10 +150,32 @@ abstract class ObjectModel {
         //then assign it the corresponding $key in properties
         foreach ($_REQUEST as $key => $value) {
             if (in_array($key, array_keys($this->properties)))
-                $this->$key = is_scalar($value) ? trim($value) : $value;
+            //Sanitize user input!. No tags allowed, convert to html entities
+                $this->$key = $this->sanitizeData($value, NULL, TRUE);
             //this must be a control field
             else
                 $this->controlFields[$key] = $value;
+        }
+    }
+
+    /**
+     * Sanitize input data (recursive function)
+     * 
+     * Source: PHP for Absolute Beginners / Jason Lengstorf/ Apress/ 2009
+     * Version : 1.1
+     * Date : 27/02/2013
+     * 
+     * @param string or array $data data to be sanitized
+     * @param string $allowableTags tags allowed
+     * @param boolean $htmlEntity convert sanitized data to htmlEntities
+     * @return sanitized data
+     */
+    public function sanitizeData($data, $allowableTags = NULL, $htmlEntity = FALSE) {
+        if (!is_array($data)) {
+            $stripTag = strip_tags(trim($data), $allowableTags);
+            return ($htmlEntity) ? htmlentities($stripTag, ENT_COMPAT, 'UTF-8') : $stripTag;
+        } else {
+            return array_map('sanitizeData', $data);
         }
     }
 
@@ -162,15 +185,18 @@ abstract class ObjectModel {
      * If the fields could be empty then it is ok when it is empty but when it is not empty it will be 
      * checked by function checkFormat. checkFormat must be implemented in child class.
      * 
+     * @exceptionArray array Explicit fields names not to be checked
      * @return None
      */
-    public function validate() {
+    public function validate($exceptionArray = array()) {
         //Check all properties including control fields from form submission
         //ex: newpassword, newpasswordagain
         $allProperties = array_merge($this->properties, $this->controlFields);
         $possibleEmptyFields = array_merge(array_keys($this->optionalProperties), array_keys($this->controlFields), array($this->pkName));
         $success = TRUE;
         foreach ($allProperties as $field => $value) {
+            //in exception fields ? don't validate go to next iteration
+            if (in_array($field, $exceptionArray)) continue;
             //form_filled already trim the entered value
             if (empty($value)) {
                 //if this $field is not allowed to be empty then set error

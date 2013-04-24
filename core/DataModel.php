@@ -1,7 +1,6 @@
 <?php
 
 namespace Mii\Core;
-require_once '..\Config\appconfig.php'; //TODO Change this absolute path when go Live
 
 //===============================================================
 // Data Service Model/ORM
