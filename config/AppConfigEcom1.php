@@ -30,9 +30,10 @@ DEFINE('DB_PASSWORD_WRITE', 'write');
 //TODO Check documentations to see if all this thing work fine
 DEFINE('LIVE', FALSE); // Are we live?
 DEFINE('CONTACT_EMAIL', 'bsquan2009@yahoo.com'); // Errors are emailed here
-DEFINE('BASE_URI', 'C:/xampp/htdocs/MiiMVC/');
-DEFINE('BASE_URL', 'localhost/MiiMVC/Ecom1/');
-DEFINE('REDIRECT_URL','localhost/MiiMVC/Ecom1/index.php');
+DEFINE('BASE_URI', 'C:/xampp/htdocs/MiiMVC/ecom1/');
+DEFINE('BASE_URL', 'localhost/MiiMVC/ecom1/');
+DEFINE('MII_URI','C:/xampp/htdocs/MiiMVC/');
+DEFINE('REDIRECT_URL','localhost/MiiMVC/ecom1/index.php');
 DEFINE('PDF_DIR', 'C:/xampp/htdocs/pdf');
 
 ################################################################

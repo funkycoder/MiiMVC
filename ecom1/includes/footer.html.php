@@ -1,6 +1,6 @@
 <!-- END CONTENT -->
 <p><br clear="all" /></p>
-</div> //<!-- end content div-->
+</div> <!-- end content div-->
 
 <div class="sidebar">	
 
@@ -38,7 +38,7 @@
 				';
         }
     } else { // Show the login form:
-        require (__DIR__ . '/login_form.html.php');
+        require BASE_URI.'login/View/login.html.php';
     } // End log-in or not logged in menu
     ?>
 

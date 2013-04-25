@@ -2,8 +2,8 @@
 
 namespace Mii\Core;
 
-require_once __DIR__ . '/Settings.php';
-require_once \Settings::$APP_CONFIG_FILE;
+require __DIR__ . '/Settings.php';
+require Settings::$APP_CONFIG_FILE;
 
 //=============================================================================================
 // Object Model
@@ -184,19 +184,18 @@ abstract class ObjectModel {
      * 
      * If the fields could be empty then it is ok when it is empty but when it is not empty it will be 
      * checked by function checkFormat. checkFormat must be implemented in child class.
-     * 
-     * @exceptionArray array Explicit fields names not to be checked
+     * if the field is in formatExceptionFields then it will not be checked for correct format
+     * $formatExceptionFields array Explicit fields names not to be checked
      * @return None
      */
-    public function validate($exceptionArray = array()) {
+    public function validate($formatExceptionFields = array()) {
         //Check all properties including control fields from form submission
         //ex: newpassword, newpasswordagain
         $allProperties = array_merge($this->properties, $this->controlFields);
         $possibleEmptyFields = array_merge(array_keys($this->optionalProperties), array_keys($this->controlFields), array($this->pkName));
         $success = TRUE;
         foreach ($allProperties as $field => $value) {
-            //in exception fields ? don't validate go to next iteration
-            if (in_array($field, $exceptionArray)) continue;
+
             //form_filled already trim the entered value
             if (empty($value)) {
                 //if this $field is not allowed to be empty then set error
@@ -208,10 +207,16 @@ abstract class ObjectModel {
                 //empty field so don't need to check format
                 continue;
             }//end if (empty($value))
+            // //in exception fields ? don't validate go to next iteration
+            if (in_array($field, $formatExceptionFields)) {
+                continue;
+            }
             //once the $success = FALSE then it will always be FALSE
             //See : $success=$success&&checkFormat ($success = false then checkFormat will be omitted)
             //This is not what we want
-            $success = $this->checkFormat($field, $value) && $success;
+            else {
+                $success = $this->checkFormat($field, $value) && $success;
+            }
         }
         return $success;
     }

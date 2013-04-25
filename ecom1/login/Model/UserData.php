@@ -1,10 +1,9 @@
 <?php
 
-namespace Mii\Login\Model;
-
+namespace Ecom1\Login\Model;
 use Mii\Core;
+require 'C:/xampp/htdocs/MiiMVC/core/DataModel.php';
 
-require_once '..\Core\DataModel.php';
 //=============================================================================================
 // UserData 
 //============================================================================================
@@ -24,27 +23,36 @@ class UserData extends Core\DataModel {
     #               SPECIFIC USERDATA FUNCTIONS HERE                                                                   ##
     #                                                                                                                  ##
     #####################################################################################################################
+//Registration expires?
 
-    public function checkEmailTaken() {
-        $tempObject = $this->retrieve_one_by_field('useremail', $this->myObject->useremail);
-        return (!$tempObject->isEmpty());
+    public function getExpires() {
+        return \strtotime($this->date_expires) > \time();
     }
 
     public function checkPassword() {
         $myObject = $this->myObject;
-        $tempObject = $this->retrieve_one_by_field('useremail', $myObject->useremail);
-        if ($tempObject->password == $this->encryptPassword($tempObject->salt, $myObject->password)) {
+        //Login by email?
+        $useremailObject = $this->retrieve_one_by_field('useremail', $myObject->useremail);
+        if ($useremailObject->password == $this->hashPassword($useremailObject->salt, $myObject->password)) {
             //correct password? get all related data from database
-            $myObject->properties = $tempObject->properties;
+            $myObject->properties = $useremailObject->properties;
+            return TRUE;
+        }
+        //Login by username
+        $usernameObject = $this->retrieve_one_by_field('username', $myObject->username);
+        if ($usernameObject->password == $this->hashPassword($usernameObject->salt, $myObject->password)) {
+            //correct password? get all related data from database
+            $myObject->properties = $usernameObject->properties;
             return TRUE;
         }
         //Wrong password!.
         return FALSE;
     }
 
-    public function encryptPassword($salt, $password) {
-        //sha1 required 40 characters
-        return sha1($salt . $password);
+    public function hashPassword($salt, $password) {
+        //sha256 return 64 chars or 32 bytes binary data
+        //(if raw_output =TRUE)
+        return hash_hmac('sha256', $password, $salt, TRUE);
     }
 
     public function checkHash() {
@@ -69,7 +77,7 @@ class UserData extends Core\DataModel {
         $myObject = $this->myObject;
         $myObject->salt = time();
         $myObject->timestamp = time();
-        $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
+        $myObject->password = $this->hashPassword($myObject->salt, $myObject->password);
         return parent::insert();
     }
 
@@ -77,7 +85,7 @@ class UserData extends Core\DataModel {
         $myObject = $this->myObject;
         $myObject->timestamp = time();
         IF ($UPDATE_PASSWORD) {
-            $myObject->password = $this->encryptPassword($myObject->salt, $myObject->password);
+            $myObject->password = $this->hashPassword($myObject->salt, $myObject->password);
         }
         return parent::update();
     }
