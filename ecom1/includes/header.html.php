@@ -15,7 +15,7 @@ if (isset($page_title)) {
 <div id="wrap">
 	<div class="header">
 		<!-- TITLE -->
-		<h1><a href="<?php BASE_URL.'index.php' ?>">Knowledge is Power</a></h1>
+		<h1><a href="<?php BASE_URL.'/index.php' ?>">Knowledge is Power</a></h1>
 		<h2>and it pays to know</h2>
 		<!-- END TITLE -->
 	</div>
@@ -26,15 +26,12 @@ if (isset($page_title)) {
 			
 			// Array of labels and pages (without extensions):
 			$pages = array (
-				'Home' => 'index.php',
+				'Home' => '/index.php',
 				'About' => '#',
 				'Contact' => '#',
-				'Register' => 'register.php'
+				'Register' => '/login/index.php?action=register'
 			);
-
-			// The page being viewed:
-			$this_page = basename($_SERVER['PHP_SELF']);
-			
+				
 			// Create each menu item:
 			foreach ($pages as $k => $v) {
 				
@@ -42,10 +39,10 @@ if (isset($page_title)) {
 				echo '<li';
 				
 				// Add the class if it's the current page:
-				if ($this_page == $v) echo ' class="selected"';
+				if (isset($_GET['action']) && $_GET['action'] == strtolower($k)) echo ' class="selected"';
 				
 				// Complete the item:
-				echo '><a href="' . $v . '"><span>' . $k . '</span></a></li>
+				echo '><a href="'. BASE_URL. $v . '"><span>' . $k . '</span></a></li>
 				';
 				
 			} // End of FOREACH loop.

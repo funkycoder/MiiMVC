@@ -1,26 +1,22 @@
-<?php
-use Mii\Lib;
-require_once MII_URI . 'lib/Form.inc.php';
-
-$errors = isset($user->errors)? $user->errors : array();
-$actionURI = BASE_URI . 'login/index.php';
-$title = isset($title)? $title : 'Login';
+<?php use Mii\Lib;
+if ($SHOW_LOGIN_FORM):
 ?>
 <div class="title">
-    <h4><?php echo $title; ?></h4>
+    <h4>Login</h4>
 </div>
-<form action="<?php echo $actionURI ?>?action=login" method="post" accept-charset="utf-8">
+<form action="<?php echo ACTION_URL ?>?action=login" method="post" accept-charset="utf-8">
     <p>
         <?php
-        if (array_key_exists('login', $errors)) {
-            echo '<span class="error">' . $errors['login'] . '</span><br />';
+        if (isset($user->errors['login'])) {
+            echo '<span class="error">' . $user->errors['login'] . '</span><br />';
         }
         ?>
         <label for="useremail"><strong>Email Address/ Username</strong></label><br />
-        <?php Lib\Mii_Form::create_form_input('useremail', $user->useremail, 'text', $errors); ?><br />
+        <?php Lib\Form::create_form_input('useremail', $user->useremail, 'text', $user->errors); ?><br />
         <label for="password"><strong>Password</strong></label><br />
-        <?php Lib\Mii_Form::create_form_input('password', $user->password, 'password', $errors); ?> 
-        <a href="forgot_password.php" align="right">Forgot?</a><br />
+        <?php Lib\Form::create_form_input('password', $user->password, 'password', $user->errors); ?><br/>
+        <a href="forgot_password.php" align="right">Quên mật khẩu?</a><br />
         <input type="submit" value="Login &rarr;">
     </p>
 </form>
+<?php endif;?>

@@ -1,10 +1,11 @@
 <?php
 
 namespace Ecom1\Login\Model;
+
 use Mii\Core;
 
 require __DIR__ . '/UserData.php';
-require 'C:/xampp/htdocs/MiiMVC/core/ObjectModel.php';
+require MII_URI.'core/ObjectModel.php';
 
 //=============================================================================================
 // User object
@@ -21,7 +22,7 @@ class User extends Core\ObjectModel {
 
     public $logged_in = FALSE;
     protected $mailFields = array('useremail');
-    protected $passwordFields = array('password', 'newpassword', 'newpasswordagain');
+    protected $passwordFields = array('password', 'pass1', 'pass2');
     protected $nameFields = array('username', 'first_name', 'last_name');
     protected $phoneFields = array('userphone');
 
@@ -29,6 +30,8 @@ class User extends Core\ObjectModel {
         $expectedFields = array('username', 'first_name', 'last_name', 'useremail', 'password', 'userphone');
         $optionalFields = array('type', 'salt', 'hash', 'date_created', 'date_modified', 'date_expires');
         parent::__construct(new UserData(), 'userid', $expectedFields, $optionalFields, USER_TABLE);
+        //default type is member
+        $this->type = 'member';
         if (!isset($_SESSION)) {
             session_start();
             ob_start();
@@ -88,9 +91,9 @@ class User extends Core\ObjectModel {
      * 
      * @return boolean login successful?
      */
-    public function login() {
+    public function login($USE_EMAIL = TRUE) {
         $this->logged_in = FALSE;
-        $success = $this->dataService->checkPassword();
+        $success = $this->dataService->checkPassword($USE_EMAIL);
         if (!$success) {
             $this->errors['login'] = 'Đăng nhập thất bại. (Email/Password không đúng)';
             return FALSE;
@@ -135,9 +138,13 @@ class User extends Core\ObjectModel {
                 $this->errors['register'] = 'Tài khoản đã được đăng ký. Nếu quên mật khẩu, xin vui lòng dùng link phía bên phải.';
         }
         else { // This account not registered before,ok to proceed
-            $success = $this->insert();
-            If (!$success) {
-                $this->errors['register'] = 'Lỗi hệ thống. Xin vui lòng thử lại.';
+            if ($this->password == $this->controlFields['pass2']) { //Enter the 2 password correct?
+                $success = $this->insert();
+                if (!$success) {
+                    $this->errors['register'] = 'Lỗi hệ thống. Xin vui lòng thử lại.';
+                }
+            } else {
+                $this->errors['pass2'] = 'Mật khẩu không trùng nhau';
             }
         }
         return $success;
@@ -189,19 +196,23 @@ class User extends Core\ObjectModel {
 
     //Override update() function in ObjectModel
     public function update() {
-        $UPDATE_PASSWORD = FALSE;
+        //old password ok? check password using email, but do not get data from database
+        if (!$this->dataService->checkPassword(TRUE,FALSE)) {
+            $this->errors['password'] = 'Mật khẩu không đúng.';
+            return FALSE;
+        }
         if ($this->controlFields['pass1']) {
             if (!($this->controlFields['pass1'] == $this->controlFields['pass2'])) {
                 $this->errors['pass2'] = 'Password mới không trùng khớp.';
                 return FALSE;
             } else {
-                //password fields match
+                //password fields match                
+               //its time to change the new pasword
                 $this->password = $this->controlFields['pass1'];
-                $UPDATE_PASSWORD = TRUE;
             }
         }
         try {
-            $success = $this->dataService->update($UPDATE_PASSWORD);
+            $success = $this->dataService->update();
         } catch (\PDOException $e) {
             $this->errors['update'] = 'Cập nhật record thất bại. (' . $e->errorInfo[2] . ')';
             return FALSE;
@@ -229,17 +240,17 @@ class User extends Core\ObjectModel {
      * @param type $value value needs to be checked
      * @return boolean in correct format ?
      */
-    public function checkFormat($field, $value) {
+    public function checkFormat($field, $value, $ERROR_MESSAGE = TRUE) {
         switch ($field) {
             case in_array($field, $this->mailFields):
                 $regex = "/^[_+a-z0-9-]+(\.[_+a-z0-9-]+)*"
                         . "@[a-z0-9-]+(\.[a-z0-9-]{1,})*"
-                        . "\.([a-z]{2,}){1}$/i";
+                        . "(\.[a-z]{2,}){1}$/i";
                 $error = "Email không hợp lệ.";
                 break;
             case in_array($field, $this->passwordFields):
-                $regex = "/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/";
-                $error = "Mật khẩu dài tối thiểu 8 ký tự và có ít nhất 1 chữ số, 1 chữ hoa và 1 chữ thường";
+                $regex = "/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/"; //Mật khẩu dài tối thiểu 8 ký tự và có ít nhất 1 chữ số, 1 chữ hoa và 1 chữ thường
+                $error = "Mật khẩu không hợp lệ.";
                 break;
             case in_array($field, $this->nameFields):
                 $regex = "/^([a-z]){4,100}$/i";
@@ -253,7 +264,8 @@ class User extends Core\ObjectModel {
                 return TRUE;
         }
         if (!preg_match($regex, $value)) {
-            $this->errors[$field] = $error;
+            if ($ERROR_MESSAGE)
+                $this->errors[$field] = $error;
             return FALSE;
         }
         return TRUE;
