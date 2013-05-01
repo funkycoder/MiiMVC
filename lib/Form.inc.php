@@ -15,7 +15,7 @@
 
 namespace Mii\Lib;
 
-class Mii_Form {
+class Form {
 
 // This script defines any functions required by the various forms.
 // This script is created in Chapter 4.
@@ -108,7 +108,7 @@ class Mii_Form {
         }
         foreach ($_POST as $key => $value) {
             //sanitize user input. if $value is an array it will be sanitized thoroughly
-            $value = Mii_Form::sanitizeData($value);
+            $value = Form::sanitizeData($value);
             //if empty and required then add to $missing array
             if (empty($value) && in_array($key, $required)) {
                 $missing[] = $key;

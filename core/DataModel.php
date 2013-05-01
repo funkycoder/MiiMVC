@@ -20,13 +20,14 @@ namespace Mii\Core;
  * @copyright (c) 2008-2012, Eric Koh {kissmvc.php version 0.72}
  */
 abstract class DataModel {
+
     protected $myObject; //Related object
     protected $pkName; //Keep primary key
     protected $tableName; // Table name
     protected $appConfig;
 
     public function __construct() {
-        $this->appConfig = \AppConfig::getInstance();        
+        $this->appConfig = \AppConfig::getInstance();
     }
 
     public function initDataService(ObjectModel $myObject, $pkName = '', $tableName = '') {
@@ -40,8 +41,8 @@ abstract class DataModel {
     }
 
     protected function getConnection($usertype = 'read') {
-       
-       return $this->appConfig->getConnection($usertype);
+
+        return $this->appConfig->getConnection($usertype);
     }
 
     protected function deflateValue($value) {
@@ -54,13 +55,13 @@ abstract class DataModel {
         return \unserialize(COMPRESS_ARRAY ? \gzinflate($value) : $value);
     }
 
-     ####################################################################################################################
+    ####################################################################################################################
     #                                                                                                                  ##
     #               THE FOLLOWING FUNCTIONS WILL BE HANDLED IN OBJECTMODEL FUNCTIONS                                   ##
     #                                                                                                                  ##
     #####################################################################################################################
-    
     //Inserts record into database with a new auto-incremented primary key
+
     public function insert() {
         $conn = $this->getConnection('write');
         $myObject = $this->myObject;
@@ -143,8 +144,9 @@ abstract class DataModel {
         $rs = $stmt->fetch(\PDO::FETCH_ASSOC);
         $class = get_class($this->myObject);
         $myclass = new $class();
-        foreach ($rs as $key => $value)
-            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        if ($rs) //if there is no record $rs = FALSE (boolean)
+            foreach ($rs as $key => $value)
+                $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
         return $myclass;
     }
 
@@ -164,8 +166,9 @@ abstract class DataModel {
         $rs = $stmt->fetch(\PDO::FETCH_ASSOC);
         $class = get_class($this->myObject);
         $myclass = new $class();
-        foreach ($rs as $key => $value)
-            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        if ($rs) //if there is no record $rs = FALSE (boolean)
+            foreach ($rs as $key => $value)
+                $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
         return $myclass;
     }
 
@@ -180,8 +183,9 @@ abstract class DataModel {
         $rs = $result->fetch(\PDO::FETCH_ASSOC);
         $class = get_class($this->myObject);
         $myclass = new $class();
-        foreach ($rs as $key => $value)
-            $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
+        if ($rs) //if there is no record $rs = FALSE (boolean)
+            foreach ($rs as $key => $value)
+                $myclass->$key = is_scalar($myclass->$key) ? $value : $this->inflateValue($value);
         return $myclass;
     }
 

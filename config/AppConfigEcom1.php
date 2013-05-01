@@ -31,10 +31,12 @@ DEFINE('DB_PASSWORD_WRITE', 'write');
 DEFINE('LIVE', FALSE); // Are we live?
 DEFINE('CONTACT_EMAIL', 'bsquan2009@yahoo.com'); // Errors are emailed here
 DEFINE('BASE_URI', 'C:/xampp/htdocs/MiiMVC/ecom1/');
-DEFINE('BASE_URL', 'localhost/MiiMVC/ecom1/');
+DEFINE('BASE_URL', 'http://localhost/MiiMVC/ecom1');
 DEFINE('MII_URI','C:/xampp/htdocs/MiiMVC/');
 DEFINE('REDIRECT_URL','localhost/MiiMVC/ecom1/index.php');
 DEFINE('PDF_DIR', 'C:/xampp/htdocs/pdf');
+DEFINE('VIEW_HEADER',BASE_URI . 'includes/header.html.php');
+DEFINE('VIEW_FOOTER',BASE_URI . 'includes/footer.html.php');
 
 ################################################################
 ##                                                            ##

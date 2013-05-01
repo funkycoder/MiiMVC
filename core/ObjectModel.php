@@ -2,9 +2,6 @@
 
 namespace Mii\Core;
 
-require __DIR__ . '/Settings.php';
-require Settings::$APP_CONFIG_FILE;
-
 //=============================================================================================
 // Object Model
 //============================================================================================
@@ -26,9 +23,9 @@ abstract class ObjectModel {
     protected $pkName; //primary key name
     protected $properties = array(); //this represent all columns in database of this object
     protected $optionalProperties = array(); //could be entered using submission or left blank, these will be appended to $properties
-    protected $controlFields = array(); //control fields form form submission
+    protected $controlFields = array(); //control fields form from submission
     protected $dataService; //take care of the interaction btw this obj and from submission (DataModel obj type)
-    protected $errors;
+    protected $errors = array(); //dont have to initialize it later on
 
     function __construct(DataModel $dataModel, $pkName = '', $fields = array(), $optionalFields = array(), $tableName = '') {
         $dataModel->initDataService($this, $pkName, $tableName);
@@ -60,8 +57,12 @@ abstract class ObjectModel {
         if (isset($this->$key)) {
             return $this->$key;
         }
+        // is this a control field ?
+        if (in_array($key, $this->controlFields)) {
+            return $this->controlFields[$key];
+        }
         //no getMethod or class variable? then it could be from this object properties
-        return $this->properties[$key];
+        return isset($this->properties[$key]) ? $this->properties[$key] : '';
     }
 
     public function __set($key, $value) {
@@ -114,14 +115,8 @@ abstract class ObjectModel {
         return $this->controlFields;
     }
 
-//TODO delete this after testing
     public function setControlField($field, $value) {
         $this->controlFields[$field] = $value;
-    }
-
-    //TODO To delete
-    public function setControlFields($controlFields = array()) {
-        $this->controlFields = array_merge($this->controlFields, $controlFields);
     }
 
     public function getErrors() {
@@ -130,10 +125,8 @@ abstract class ObjectModel {
 
     public function getError($field) {
         //if this error has been set then return it
-        if (isset($this->errors[$field]))
-            return $this->errors[$field];
         //if not set, then return empty string for display use only
-        return '';
+        return (isset($this->errors[$field])) ? $this->errors[$field] : '';
     }
 
     public function setError($field, $value) {
