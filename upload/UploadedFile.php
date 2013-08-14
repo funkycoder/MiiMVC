@@ -21,14 +21,16 @@ abstract class UploadedFile {
     protected $type;
     protected $size;
     protected $max_file_size;
+    protected $error;
     protected $errors = array();
 
-    public function __construct($name, $size, $type, $temp_file, $max_file_size) {
+    public function __construct($name, $size, $type, $temp_file, $error, $max_file_size) {
         $this->name = $name;
         $this->original_name = $name;
         $this->size = $size;
         $this->type = $type;
         $this->temp_file = $temp_file;
+        $this->error = $error;
         $this->max_file_size = $max_file_size;
     }
 
@@ -41,14 +43,14 @@ abstract class UploadedFile {
         }
     }
 
-    //Security issue , must check whether the tmp_file is really an uploaded file
     protected function fileUploadedOK() {
-        return (\is_uploaded_file($this->temp_file) && \is_readable($this->temp_file));
+        //Security issue , must check whether the tmp_file is really an uploaded file
+        return ($this->checkError(($this->error)) && \is_uploaded_file($this->temp_file));
     }
 
     protected function fileSizeOK() {
         if ($this->size > $this->max_file_size) {
-            $this->error .= 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
+            $this->errors['Max Size'] = 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
             return FALSE;
         } else {
             return TRUE;
@@ -56,6 +58,46 @@ abstract class UploadedFile {
     }
 
     abstract function fileTypeOK();
+
+    public function isReady() {
+        return $this->fileUploadedOK()&&$this->fileSizeOK() && $this->fileTypeOK();
+    }
+    
+    /**
+     * Check for upload errors in $_FILES
+     * 
+     * Source: PHP Solutions Dynamic Design Made Easy 2nd Edition / David Powers/ FriendsofEd(Apress)/ 2010/ Chapter 6
+     * Version : 1.0
+     * Date : 14/02/2013
+     * Modified date: 14/02/2013, 04/06/2013
+     * Modified by : Nguyen Nhu Quan
+     * Reason: Use named error constant
+     * 
+     * @param int $error error code in $_FILES 
+     * @return bool Pass error check or not. 
+     */
+    protected function checkError($error) {
+        switch ($error) {
+            case \UPLOAD_ERR_OK :
+                return TRUE;
+            case \UPLOAD_ERR_INI_SIZE :
+            case \UPLOAD_ERR_FORM_SIZE:
+                $this->errors['Upload'] = 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
+                return FALSE;
+            case \UPLOAD_ERR_PARTIAL:
+                $this->errors['Upload'] = "Upload file: $this->original_name không hoàn chỉnh.";
+                return FALSE;
+            case \UPLOAD_ERR_NO_FILE :
+                $this->errors['Upload'] = "Không file nào được chọn.";
+                return FALSE;
+            case \UPLOAD_ERR_NO_TMP_DIR :
+                $this->errors['Upload'] = "Không có thư mục tạm trên server";
+                return FALSE;
+            default :
+                $this->errors['Upload'] = "Lỗi hệ thống, vui lòng liên hệ admin.";
+                return FALSE;
+        }
+    }
 
     protected function getRandomName() {
         //  string uniqid ([ string $prefix = "" [, bool $more_entropy = false ]] )
@@ -104,9 +146,7 @@ abstract class UploadedFile {
         $this->name = $nospaces;
     }
 
-    public function isReady() {
-        return $this->fileSizeOK() && $this->fileTypeOK() && $this->isUploaded();
-    }
+    
 
     public function move($destination, $RANDOM_NAME = TRUE, $OVERWRITE = TRUE) {
         $SUCCESS = FALSE;
