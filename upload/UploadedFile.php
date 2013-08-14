@@ -2,34 +2,49 @@
 
 namespace Mii\Upload;
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of UploadedFile
- *
- * @author Quan Nguyen
- */
 abstract class UploadedFile {
 
     protected $name;
     protected $original_name;
-    protected $file_path;
     protected $temp_file;
     protected $type;
     protected $size;
     protected $max_file_size;
+    protected $file_path; //file path of this file after uploaded (destination when moved)
+    protected $error; 
     protected $errors = array();
 
-    public function __construct($name, $size, $type, $temp_file, $max_file_size) {
+    public function __construct($name, $size, $type, $temp_file, $error, $max_file_size) {
         $this->name = $name;
         $this->original_name = $name;
         $this->size = $size;
         $this->type = $type;
         $this->temp_file = $temp_file;
+        $this->error = $error;
         $this->max_file_size = $max_file_size;
+    }
+
+    protected function checkError() {
+        switch ($this->error) {
+            case UPLOAD_ERR_OK :
+                return TRUE;
+            case UPLOAD_ERR_INI_SIZE :
+            case UPLOAD_ERR_FORM_SIZE:
+                $this->errors['Upload'] = 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
+                return FALSE;
+            case UPLOAD_ERR_PARTIAL:
+                $this->errors['Upload'] = "Upload file $this->original_name không hoàn chỉnh.";
+                return FALSE;
+            case UPLOAD_ERR_NO_FILE :
+                $this->errors['Upload'] = "Không có file nào được chọn để upload.";
+                return FALSE;
+            case UPLOAD_ERR_NO_TMP_DIR :
+                $this->errors['Upload'] = "Không có thư mục tạm để lưu file.";
+                return FALSE;
+            default :
+                $this->errors['Upload'] = "Lỗi hệ thống! Vui lòng liên hệ admin.";
+                return FALSE;
+        }
     }
 
     protected function directoryOK($dir) {
@@ -43,12 +58,12 @@ abstract class UploadedFile {
 
     //Security issue , must check whether the tmp_file is really an uploaded file
     protected function fileUploadedOK() {
-        return (\is_uploaded_file($this->temp_file) && \is_readable($this->temp_file));
+        return (\is_uploaded_file($this->temp_file));
     }
 
     protected function fileSizeOK() {
         if ($this->size > $this->max_file_size) {
-            $this->error .= 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
+            $this->errors['Upload'] = 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
             return FALSE;
         } else {
             return TRUE;
@@ -56,6 +71,10 @@ abstract class UploadedFile {
     }
 
     abstract function fileTypeOK();
+
+    public function isReady() {
+        return $this->checkError()&&$this->isUploaded() && $this->fileSizeOK() && $this->fileTypeOK();
+    }
 
     protected function getRandomName() {
         //  string uniqid ([ string $prefix = "" [, bool $more_entropy = false ]] )
@@ -104,8 +123,15 @@ abstract class UploadedFile {
         $this->name = $nospaces;
     }
 
-    public function isReady() {
-        return $this->fileSizeOK() && $this->fileTypeOK() && $this->isUploaded();
+    protected function addSlashToPathName($dir) {
+        //get the last character
+        $last = \substr($dir, -1);
+        //add a trailing slash if missing (second condition using an escapte back slash)
+        if ($last == '/' || $last == '\\') {
+            return $dir;
+        } else {
+            return $dir . DIRECTORY_SEPARATOR;
+        }
     }
 
     public function move($destination, $RANDOM_NAME = TRUE, $OVERWRITE = TRUE) {
@@ -130,17 +156,6 @@ abstract class UploadedFile {
 
     public function delete() {
         @\unlink($this->file_path . $this->name);
-    }
-
-    protected function addSlashToPathName($dir) {
-        //get the last character
-        $last = \substr($dir, -1);
-        //add a trailing slash if missing (second condition using an escapte back slash)
-        if ($last == '/' || $last == '\\') {
-            return $dir;
-        } else {
-            return $dir . DIRECTORY_SEPARATOR;
-        }
     }
 
 }
