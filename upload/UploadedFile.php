@@ -23,29 +23,6 @@ abstract class UploadedFile {
         $this->max_file_size = $max_file_size;
     }
 
-    protected function checkError() {
-        switch ($this->error) {
-            case UPLOAD_ERR_OK :
-                return TRUE;
-            case UPLOAD_ERR_INI_SIZE :
-            case UPLOAD_ERR_FORM_SIZE:
-                $this->errors['Upload'] = 'Kích thước file vượt quá qui định (MAX: ' . \number_format($this->max_file_size / 1024, 1) . ' KB).';
-                return FALSE;
-            case UPLOAD_ERR_PARTIAL:
-                $this->errors['Upload'] = "Upload file $this->original_name không hoàn chỉnh.";
-                return FALSE;
-            case UPLOAD_ERR_NO_FILE :
-                $this->errors['Upload'] = "Không có file nào được chọn để upload.";
-                return FALSE;
-            case UPLOAD_ERR_NO_TMP_DIR :
-                $this->errors['Upload'] = "Không có thư mục tạm để lưu file.";
-                return FALSE;
-            default :
-                $this->errors['Upload'] = "Lỗi hệ thống! Vui lòng liên hệ admin.";
-                return FALSE;
-        }
-    }
-
     protected function directoryOK($dir) {
         if (is_dir($dir) && is_writable($dir)) {
             return TRUE;

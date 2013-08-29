@@ -17,9 +17,31 @@
  * replaceBaseNameInURL($name)
  */
 
-namespace Mii;
+namespace Mii\Lib;
 
-class Mii_File {
+class File {
+
+    public $fullpath = '';
+
+    public function __construct($fullpath) {
+        $this->fullpath = $fullpath;
+    }
+
+    public function getFullPath() {
+        return $this->fullpath;
+    }
+
+    public function getName() {
+        return \basename($this->fullpath);
+    }
+
+    public function setNewName($dir, $OVERWRITE) {
+        $this->fullpath = str_replace($this->getName(), self::getNewName($dir, $this->getName(), $OVERWRITE), $this->fullpath);
+    }
+
+    public function setRandomName() {
+        $this->fullpath = str_replace($this->getName(), self::getRandomName(), $this->fullpath);
+    }
 
     /**
      * Provide a list of file name with a certain kind of extentions in a specified directory 
@@ -109,7 +131,7 @@ class Mii_File {
     }
 
     /**
-     * Check for existed file name, overwrite or change name available
+     * Check for existed file name, overwrite or get a new name
      * 	 
      * Remove all spaces in file name and replace with _ (security issue)
      * Source: PHP Solutions Dynamic Design Made Easy 2nd Edition / David Powers/ FriendsofEd(Apress)/ 2010/ Chapter 6
@@ -119,15 +141,16 @@ class Mii_File {
      * Modified by : 
      * Reason: 
      * 
-     * @param string $name any file name
-     * @param bool $overwrite yes? 
-     * @return string $nospaces file name
+     * @param string $dir destination
+     * @param string $name current file name
+     * @param bool $OVERWRITE yes? 
+     * @return string $nospaces New name
      */
-    public static function checkFileName($dir, $name, $overwrite) {
+    public static function getNewName($dir, $name, $OVERWRITE) {
         //Remove all the space in $name by '_'
         $nospaces = str_replace(' ', '_', $name);
 
-        if (!$overwrite) {
+        if (!$OVERWRITE) {
             //rename the file if it already exists
             //Get all the file names in the directory
             $existing = scandir($dir);
@@ -153,7 +176,7 @@ class Mii_File {
         return $nospaces;
     }
 
-    public static function addSlashToPathName($dir) {
+    public static function addDirectorySeparator($dir) {
         //get the last character
         $last = substr($dir, -1);
         //add a trailing slash if missing (second condition using an escapte back slash)
@@ -164,22 +187,22 @@ class Mii_File {
         }
     }
 
-    public static function protocol() {
+    public static function getServerProtocol() {
         //$protocol = strpos($_SERVER['SERVER_SIGNATURE'], '443') ? 'https://' : 'http://';
         //$protocol= strtolower(substr($_SERVER["SERVER_PROTOCOL"],0,5))=='https'?  'https://' : 'http://';
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? 'https://' : 'http://';
         return $protocol;
     }
 
-    public static function replaceBaseNameInURL($name) {
+    public static function replaceFileNameInURL($name) {
         $filename = basename($_SERVER['SCRIPT_FILENAME']);
-        $current = Mii_File::protocol() . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+        $current = self::getServerProtocol() . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
         $url = str_replace($filename, $name, $current);
         return $url;
     }
 
     /**
-     * Returning to the same point in a navigation system
+     * Return RefererURL (in a navigation system)
      * 	 
      * Source: PHP Solutions Dynamic Design Made Easy 2nd Edition / David Powers/ FriendsofEd(Apress)/ 2010/ Chapter 15
      * Version : 1.0
@@ -187,7 +210,7 @@ class Mii_File {
      * @param string $defaultURL default referer url
      * @return string referer link
      */
-    public static function refererURL($defaultURL) {
+    public static function getRefererURL($defaultURL) {
         // check that browser supports $_SERVER variables 
         if (isset($_SERVER['HTTP_REFERER']) && isset($_SERVER['HTTP_HOST'])) {
             $url = parse_url($_SERVER['HTTP_REFERER']);
@@ -198,6 +221,17 @@ class Mii_File {
             }
         }
         return $defaultURL;
+    }
+
+    public static function getRandomName() {
+        //  string uniqid ([ string $prefix = "" [, bool $more_entropy = false ]] )
+        //  With an empty prefix, the returned string will be 13 characters long. 
+        //  If more_entropy is TRUE, it will be 23 characters. 
+        return uniqid('', TRUE);
+    }
+
+    public function delete() {
+        return \unlink($this->fullpath);
     }
 
 }
